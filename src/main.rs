@@ -1,23 +1,18 @@
-// TODO: remove
-#![allow(dead_code, unused_imports)]
+#![allow(dead_code)]
 
 use std::path::{PathBuf, Path};
 use std::sync::mpsc;
 
 mod render;
-use render::Renderer;
-
 mod edit;
+mod config;
+mod wrap;
+
+use render::Renderer;
 use edit::{Editor, Mode};
 use edit::event::EventData;
-
-mod wrap;
 use wrap::*;
-
-mod config;
 use config::{configure, Config};
-
-mod keys;
 
 use macroquad::prelude::*;
 use macroquad::miniquad::window::set_window_size;
@@ -40,6 +35,7 @@ enum AppError {
 
 type AppResult<T> = Result<T, AppError>;
 
+#[derive(Debug)]
 struct Application {
     ed: Editor,
     // TODO: this is kinda expensive, replace with VecDeque
@@ -79,7 +75,7 @@ impl Application {
         self.should_quit = true;
     }
 
-    pub fn handle_input(&mut self) {
+    fn handle_input(&mut self) {
 
         let found_bind = self.dispatch_keybinds();
 
@@ -97,7 +93,7 @@ impl Application {
 
     }
 
-    pub fn handle_events(&mut self) {
+    fn handle_events(&mut self) {
 
         if let Ok(ref ev) = self.event_queue.try_recv() {
             if let Some(callback) = self.config.autocmds().get(&ev.base()) {
@@ -126,7 +122,7 @@ impl Application {
 
     }
 
-    pub fn render(&mut self) {
+    fn render(&mut self) {
 
         clear_background(COLOR_BG);
 

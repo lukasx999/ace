@@ -8,7 +8,7 @@ use crate::wrap::{
     is_super_down,
     is_key_active
 };
-use crate::edit::{Mode, Editor};
+use crate::edit::Mode;
 
 
 

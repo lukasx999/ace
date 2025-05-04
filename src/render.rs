@@ -1,13 +1,10 @@
 use macroquad::prelude::*;
-use statusline::StatuslineRenderer;
 
-use crate::wrap::draw_rectangle_rect;
-use crate::edit::{window::Window, Editor, Statusline};
+use crate::edit::{Editor, Statusline};
 
+const PADDING: f32 = 30.;
 const COLOR_WIDGET_AREA_SEL: Color = Color::from_rgba(70, 74, 79, 255);
 const COLOR_WIDGET_AREA:     Color = Color::from_rgba(57, 60, 64, 255);
-
-use macroquad::prelude::*;
 
 mod canvas;
 mod buffer;
@@ -15,7 +12,7 @@ mod statusline;
 mod window;
 
 use canvas::CanvasRenderer;
-
+use statusline::StatuslineRenderer;
 
 
 
@@ -40,9 +37,6 @@ use canvas::CanvasRenderer;
 
 
 
-
-
-
 #[derive(Debug, Clone)]
 pub struct Renderer {
     canvas: CanvasRenderer,
@@ -56,7 +50,7 @@ impl Renderer {
         Ok(Self {
             canvas: CanvasRenderer::new().await?,
             statusline: StatuslineRenderer::new().await?,
-            padding: 30.,
+            padding: PADDING,
         })
     }
 

@@ -1,11 +1,7 @@
 use macroquad::prelude::*;
 
-use crate::wrap::draw_rectangle_rect;
-use crate::edit::{window::Window, Editor, Statusline};
+use crate::edit::Editor;
 use super::window::WindowRenderer;
-
-const COLOR_WIDGET_AREA_SEL: Color = Color::from_rgba(70, 74, 79, 255);
-const COLOR_WIDGET_AREA:     Color = Color::from_rgba(57, 60, 64, 255);
 
 
 

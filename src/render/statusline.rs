@@ -7,6 +7,8 @@ const COLOR_STATUSLINE: Color = Color::from_rgba(158, 189, 219, 255);
 const FONTPATH:         &str  = "/usr/share/fonts/TTF/Roboto-Regular.ttf";
 const FONTSIZE:         u16   = 30;
 
+
+
 #[derive(Debug, Clone)]
 pub struct StatuslineRenderer {
     font: Font,

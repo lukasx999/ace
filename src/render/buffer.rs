@@ -10,6 +10,8 @@ const COLOR_TEXT:       Color = Color::from_rgba(255, 255, 255, 255);
 const FONTPATH:         &str  = "/usr/share/fonts/TTF/JetBrainsMonoNerdFont-Regular.ttf";
 const FONTSIZE:         u16   = 30;
 
+
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CursorShape {
     #[default] Block,

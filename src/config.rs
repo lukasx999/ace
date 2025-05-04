@@ -1,14 +1,14 @@
 use std::collections::HashMap;
-use std::hash::Hash;
 use crate::edit::Statusline;
 
 use macroquad::prelude::*;
 
-use crate::edit::{Editor, Mode};
+use crate::edit::Mode;
 use crate::edit::event::{EventData, Event};
-use crate::keys::{Keybind, Key, Modifiers};
 use crate::{Application, keybind};
 
+mod keys;
+use keys::{Keybind, Key, Modifiers};
 
 
 
