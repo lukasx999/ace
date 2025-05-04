@@ -1,0 +1,10 @@
+[package]
+name = "edit"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bitflags = "2.9.0"
+clap = { version = "4.5.37", features = ["cargo"] }
+macroquad = "0.4.14"
+thiserror = "2.0.12"
