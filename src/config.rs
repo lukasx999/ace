@@ -4,7 +4,8 @@ use crate::edit::Statusline;
 
 use macroquad::prelude::*;
 
-use crate::edit::{Editor, Event, EventData, Mode};
+use crate::edit::{Editor, Mode};
+use crate::edit::event::{EventData, Event};
 use crate::keys::{Keybind, Key, Modifiers};
 use crate::{Application, keybind};
 

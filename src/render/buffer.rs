@@ -7,6 +7,8 @@ const CURSOR_SIZE:      f32   = 3.;
 const COLOR_CURSORLINE: Color = Color::from_rgba(71, 76, 82, 255);
 const COLOR_CURSOR:     Color = Color::from_rgba(186, 194, 204, 255);
 const COLOR_TEXT:       Color = Color::from_rgba(255, 255, 255, 255);
+const FONTPATH:         &str  = "/usr/share/fonts/TTF/JetBrainsMonoNerdFont-Regular.ttf";
+const FONTSIZE:         u16   = 30;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CursorShape {
@@ -49,8 +51,8 @@ impl BufferRenderer {
     pub async fn new() -> Result<Self, macroquad::Error> {
         Ok(Self {
             mode: LineNumberMode::default(),
-            font: load_ttf_font("src/fonts/jetbrainsmono.ttf").await?,
-            fontsize: 30,
+            font: load_ttf_font(FONTPATH).await?,
+            fontsize: FONTSIZE,
             buf_offset: Cursor::default(),
         })
     }
@@ -171,7 +173,7 @@ impl BufferRenderer {
     }
 
 
-    fn align_cursor_x(&mut self, args: &BufferRenderArgs) {
+    fn check_cursor_x(&mut self, args: &BufferRenderArgs) {
 
         let diffx = args.virt.x - args.charcount_vis as isize;
 
@@ -184,7 +186,7 @@ impl BufferRenderer {
         }
     }
 
-    fn align_cursor_y(&mut self, args: &BufferRenderArgs) {
+    fn check_cursor_y(&mut self, args: &BufferRenderArgs) {
 
         // if cursor is out-of-bounds, move it back by how much it moved out-of-bounds
         let diff = args.virt.y - args.linecount_vis as isize;
@@ -244,8 +246,8 @@ impl BufferRenderer {
             params,
         };
 
-        self.align_cursor_y(&args);
-        self.align_cursor_x(&args);
+        self.check_cursor_y(&args);
+        self.check_cursor_x(&args);
 
         // recalculate cursor, if offset changed, otherwise there will be
         // a cursor jumping effect at the top and bottom

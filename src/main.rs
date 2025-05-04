@@ -8,7 +8,8 @@ mod render;
 use render::Renderer;
 
 mod edit;
-use edit::{Editor, Event, EventData, Mode};
+use edit::{Editor, Mode};
+use edit::event::{Event, EventData};
 
 mod wrap;
 use wrap::*;
@@ -26,10 +27,8 @@ use macroquad::miniquad::window::set_window_size;
 
 
 
-const COLOR_BG:              Color = Color::from_rgba(40, 43, 46, 255);
-const COLOR_WIDGET_AREA:     Color = Color::from_rgba(57, 60, 64, 255);
-const COLOR_WIDGET_AREA_SEL: Color = Color::from_rgba(70, 74, 79, 255);
-const FRAMERATE:             f32 = 20.;
+const COLOR_BG:  Color = Color::from_rgba(40, 43, 46, 255);
+const FRAMERATE: f32 = 20.;
 
 
 
@@ -48,7 +47,6 @@ struct Application {
     ed: Editor,
     // TODO: this is kinda expensive, replace with VecDeque<_>
     event_queue: mpsc::Receiver<EventData>,
-
     config: Config,
     should_quit: bool,
 

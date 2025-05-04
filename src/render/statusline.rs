@@ -1,9 +1,11 @@
 use macroquad::prelude::*;
 use crate::edit::Statusline;
 use crate::wrap::{draw_rectangle_rect, draw_text_bounded};
-use crate::COLOR_WIDGET_AREA;
+use super::COLOR_WIDGET_AREA;
 
 const COLOR_STATUSLINE: Color = Color::from_rgba(158, 189, 219, 255);
+const FONTPATH:         &str  = "/usr/share/fonts/TTF/Roboto-Regular.ttf";
+const FONTSIZE:         u16   = 30;
 
 #[derive(Debug, Clone)]
 pub struct StatuslineRenderer {
@@ -15,8 +17,8 @@ impl StatuslineRenderer {
 
     pub async fn new() -> Result<Self, macroquad::Error> {
         Ok(Self {
-            font: load_ttf_font("src/fonts/roboto.ttf").await?,
-            fontsize: 20,
+            font: load_ttf_font(FONTPATH).await?,
+            fontsize: FONTSIZE,
         })
     }
 

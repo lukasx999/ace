@@ -1,12 +1,10 @@
 use macroquad::prelude::*;
 
-use crate::{
-    edit::{window::Window, Editor, Statusline},
-    wrap::draw_rectangle_rect,
-    COLOR_WIDGET_AREA,
-    COLOR_WIDGET_AREA_SEL,
-};
-use super::BufferRenderer;
+use crate::wrap::draw_rectangle_rect;
+use crate::edit::{Editor, Statusline};
+use crate::edit::window::Window;
+
+use super::{buffer::BufferRenderer, COLOR_WIDGET_AREA, COLOR_WIDGET_AREA_SEL};
 
 
 #[derive(Debug, Clone)]
