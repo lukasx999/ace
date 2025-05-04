@@ -1,7 +1,9 @@
 // TODO: remove
 #![allow(dead_code, unused_imports)]
 
+use std::cell::RefCell;
 use std::path::{PathBuf, Path};
+use std::rc::Rc;
 use std::sync::mpsc;
 
 mod render;
@@ -45,11 +47,10 @@ type AppResult<T> = Result<T, AppError>;
 
 struct Application {
     ed: Editor,
-    // TODO: this is kinda expensive, replace with VecDeque<_>
+    // TODO: this is kinda expensive, replace with VecDeque
     event_queue: mpsc::Receiver<EventData>,
     config: Config,
     should_quit: bool,
-
     renderer: Renderer,
 }
 
@@ -119,24 +120,23 @@ impl Application {
     pub fn handle_events(&mut self) {
 
         if let Ok(ref ev) = self.event_queue.try_recv() {
-            dbg!(ev);
-            if let Some(callback) = self.config.autocmds.get_mut(&ev.base()) {
-                callback.as_mut()(&mut self.ed, ev);
+            if let Some(callback) = self.config.autocmds.get(&ev.base()) {
+                callback(self, ev);
             }
         }
 
     }
 
-    // returns false if no keybindings have been dispatched
+    /// Returns false if no keybindings have been dispatched.
     fn dispatch_keybinds(&mut self) -> bool {
 
         let mut found_bind = false;
-        for (bind, action) in &mut self.config.keybinds {
+        for (bind, action) in &self.config.keybinds.clone() {
 
             if bind.mode != self.ed.mode() { continue }
 
             if bind.key.is_active() {
-                action.as_mut()(&mut self.ed);
+                action(self);
                 found_bind = true;
             }
 
@@ -150,7 +150,7 @@ impl Application {
 
         clear_background(COLOR_BG);
 
-        let status = self.config.statusline.as_mut()(&mut self.ed);
+        let status = (self.config.statusline)(self);
         let bounds = Rect::new(0., 0., screen_width(), screen_height());
         self.renderer.render(bounds, &self.ed, &status);
     }

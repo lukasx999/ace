@@ -81,6 +81,7 @@ macro_rules! keybind {
     };
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct Keybind {
     // TODO: key-chord
     pub mode: Mode,
