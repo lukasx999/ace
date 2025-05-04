@@ -28,7 +28,7 @@ impl WindowRenderer {
             COLOR_WIDGET_AREA
         });
 
-        if let Some(id) = win.bufid {
+        if let Some(id) = win.buf {
 
             let buf = ed
                 .buffers()

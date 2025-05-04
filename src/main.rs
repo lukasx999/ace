@@ -1,9 +1,7 @@
 // TODO: remove
 #![allow(dead_code, unused_imports)]
 
-use std::cell::RefCell;
 use std::path::{PathBuf, Path};
-use std::rc::Rc;
 use std::sync::mpsc;
 
 mod render;
@@ -11,18 +9,15 @@ use render::Renderer;
 
 mod edit;
 use edit::{Editor, Mode};
-use edit::event::{Event, EventData};
+use edit::event::EventData;
 
 mod wrap;
 use wrap::*;
 
 mod config;
-use config::{configure, Action, Autocmd, Config, StatuslineCallback};
+use config::{configure, Config};
 
 mod keys;
-use keys::Keybind;
-
-use edit::window::Window;
 
 use macroquad::prelude::*;
 use macroquad::miniquad::window::set_window_size;
@@ -69,35 +64,22 @@ impl Application {
         let mut self_ = Self {
             event_queue:  rx,
             should_quit:  false,
-            config:       Config::default(),
             renderer:     Renderer::new().await?,
+            config:       Config::default(),
             ed,
         };
 
         configure(&mut self_);
-
         Ok(self_)
 
     }
 
-    pub fn set_status(&mut self, action: StatuslineCallback) {
-        self.config.statusline = action;
-    }
-
-    pub fn keymap(&mut self, keybind: Keybind, action: Action) {
-        self.config.keybinds.push((keybind, action));
-    }
-
-    pub fn autocmd(&mut self, ev: Event, action: Autocmd) {
-        self.config.autocmds.insert(ev, action);
-    }
 
     pub fn quit(&mut self) {
         self.should_quit = true;
     }
 
-    // returns true if the application should quit
-    pub fn handle_input(&mut self) -> bool {
+    pub fn handle_input(&mut self) {
 
         let found_bind = self.dispatch_keybinds();
 
@@ -113,14 +95,12 @@ impl Application {
             clear_input_queue();
         }
 
-        self.should_quit
-
     }
 
     pub fn handle_events(&mut self) {
 
         if let Ok(ref ev) = self.event_queue.try_recv() {
-            if let Some(callback) = self.config.autocmds.get(&ev.base()) {
+            if let Some(callback) = self.config.autocmds().get(&ev.base()) {
                 callback(self, ev);
             }
         }
@@ -131,7 +111,7 @@ impl Application {
     fn dispatch_keybinds(&mut self) -> bool {
 
         let mut found_bind = false;
-        for (bind, action) in &self.config.keybinds.clone() {
+        for (bind, action) in self.config.clone().keybinds() {
 
             if bind.mode != self.ed.mode() { continue }
 
@@ -150,7 +130,7 @@ impl Application {
 
         clear_background(COLOR_BG);
 
-        let status = (self.config.statusline)(self);
+        let status = self.config.statusline()(self);
         let bounds = Rect::new(0., 0., screen_width(), screen_height());
         self.renderer.render(bounds, &self.ed, &status);
     }
@@ -180,11 +160,12 @@ async fn main() -> AppResult<()> {
 
     'running: loop {
 
-        app.handle_events();
-        if app.handle_input() {
+        if app.should_quit {
             break 'running;
         }
 
+        app.handle_events();
+        app.handle_input();
         app.render();
 
         sleep_framerate(FRAMERATE);

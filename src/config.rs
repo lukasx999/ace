@@ -16,30 +16,59 @@ pub type StatuslineCallback = fn(&Application) -> Statusline;
 pub type Action = fn(&mut Application);
 pub type Autocmd = fn(&mut Application, &EventData);
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Config {
-    // TODO: repeat rate
-    // TODO: use hashmap instead of vec
-    pub keybinds: Vec<(Keybind, Action)>,
-    pub autocmds: HashMap<Event, Autocmd>,
-    pub statusline: StatuslineCallback,
+    keybinds: HashMap<Keybind, Action>,
+    autocmds: HashMap<Event, Autocmd>,
+    statusline: StatuslineCallback,
 }
-
 
 impl Default for Config {
     fn default() -> Self {
         Self {
             autocmds: HashMap::default(),
-            keybinds: Vec::default(),
-            statusline: |_| { Statusline::default() },
+            keybinds: HashMap::default(),
+            statusline: |_| Statusline::default(),
         }
     }
 }
 
+impl Config {
+
+    pub fn set_status(&mut self, action: StatuslineCallback) {
+        self.statusline = action;
+    }
+
+    pub fn keymap(&mut self, keybind: Keybind, action: Action) {
+        self.keybinds.insert(keybind, action);
+    }
+
+    pub fn autocmd(&mut self, ev: Event, action: Autocmd) {
+        self.autocmds.insert(ev, action);
+    }
+
+    #[must_use]
+    pub fn autocmds(&self) -> &HashMap<Event, Autocmd> {
+        &self.autocmds
+    }
+
+    #[must_use]
+    pub fn statusline(&self) -> fn(&Application) -> Statusline {
+        self.statusline
+    }
+
+    #[must_use]
+    pub fn keybinds(&self) -> &HashMap<Keybind, Action> {
+        &self.keybinds
+    }
+
+}
+
+
 
 pub fn configure(app: &mut Application) {
 
-    app.set_status(|app| {
+    app.config.set_status(|app| {
         let ed = &app.ed;
 
         let mode = ed.mode().to_string();
@@ -74,29 +103,41 @@ pub fn configure(app: &mut Application) {
         }
     });
 
-    app.autocmd(Event::BufDel, |_app, data| {
+    app.config.autocmd(Event::BufDel, |_app, data| {
         dbg!(data);
     });
-    app.autocmd(Event::BufNew, |_app, data| {
+    app.config.autocmd(Event::BufNew, |_app, data| {
         dbg!(data);
     });
 
-    app.keymap(keybind!(Normal, J, NoMod), |app| app.ed.buf_mut().unwrap().move_down());
-    app.keymap(keybind!(Normal, K, NoMod), |app| app.ed.buf_mut().unwrap().move_up());
-    app.keymap(keybind!(Normal, L, NoMod), |app| app.ed.buf_mut().unwrap().move_right());
-    app.keymap(keybind!(Normal, H, NoMod), |app| app.ed.buf_mut().unwrap().move_left());
+    app.config.keymap(keybind!(Normal, J, NoMod), |app| app.ed.buf_mut().unwrap().move_down());
+    app.config.keymap(keybind!(Normal, K, NoMod), |app| app.ed.buf_mut().unwrap().move_up());
+    app.config.keymap(keybind!(Normal, L, NoMod), |app| app.ed.buf_mut().unwrap().move_right());
+    app.config.keymap(keybind!(Normal, H, NoMod), |app| app.ed.buf_mut().unwrap().move_left());
 
-    app.keymap(keybind!(Normal, D, Ctrl),  |app| app.ed.buf_mut().unwrap().move_down_many(10));
-    app.keymap(keybind!(Normal, U, Ctrl),  |app| app.ed.buf_mut().unwrap().move_up_many(10));
-    app.keymap(keybind!(Normal, D, NoMod), |app| app.ed.buf_mut().unwrap().delete_line());
-    app.keymap(keybind!(Normal, M, NoMod), |app| app.ed.show_messages());
-    app.keymap(keybind!(Normal, G, Shift), |app| app.ed.buf_mut().unwrap().move_bottom());
-    app.keymap(keybind!(Normal, G, NoMod), |app| app.ed.buf_mut().unwrap().move_top());
-    app.keymap(keybind!(Normal, I, NoMod), |app| app.ed.set_mode(Mode::Insert));
-        //     keybind!(Normal, I, Shift, |ed| {
-        //         ed.buf_mut().unwrap().move_start_line();
-        //         ed.set_mode(Mode::Insert);
-        //     }),
+    app.config.keymap(keybind!(Normal, D, Ctrl),  |app| app.ed.buf_mut().unwrap().move_down_many(10));
+    app.config.keymap(keybind!(Normal, U, Ctrl),  |app| app.ed.buf_mut().unwrap().move_up_many(10));
+    app.config.keymap(keybind!(Normal, D, NoMod), |app| app.ed.buf_mut().unwrap().delete_line());
+    app.config.keymap(keybind!(Normal, M, NoMod), |app| app.ed.show_messages());
+    app.config.keymap(keybind!(Normal, G, Shift), |app| app.ed.buf_mut().unwrap().move_bottom());
+    app.config.keymap(keybind!(Normal, G, NoMod), |app| app.ed.buf_mut().unwrap().move_top());
+    app.config.keymap(keybind!(Normal, I, NoMod), |app| app.ed.set_mode(Mode::Insert));
+    app.config.keymap(keybind!(Normal, I, Shift), |app| {
+        app.ed.buf_mut().unwrap().move_start_line();
+        app.ed.set_mode(Mode::Insert);
+    });
+
+    app.config.keymap(keybind!(Normal, Q, NoMod), |app| app.quit());
+
+    app.config.keymap(keybind!(Insert, Backspace, NoMod), |app| {
+        app.ed.buf_mut().unwrap().delete_char_before();
+    });
+
+    app.config.keymap(keybind!(Insert, Escape, NoMod), |app| {
+        app.ed.set_mode(Mode::Normal);
+        app.ed.buf_mut().unwrap().move_left();
+    });
+
         //
         //     keybind!(Normal, X,    NoMod, |ed| ed.buf_mut().unwrap().delete_char()),
         //     keybind!(Normal, Key0, NoMod, |ed| ed.buf_mut().unwrap().move_start_line()),
@@ -123,9 +164,6 @@ pub fn configure(app: &mut Application) {
         //         ed.set_mode(Mode::Insert);
         //     }),
         //
-        //     // TODO:
-        //     // keybind!(Normal, Q, NoMod, |ed| {
-        //     // }),
         //
         //     keybind!(Normal, O, Shift, |ed| {
         //         ed.buf_mut().unwrap().newline_above();
@@ -152,19 +190,8 @@ pub fn configure(app: &mut Application) {
         //         buf.move_right();
         //         buf.move_right();
         //     }),
-        //     keybind!(Insert, Backspace, NoMod, |ed| {
-        //
-        //         ed.buf_mut().unwrap().delete_char_before();
-        //
-        //         // ed.buf_mut().unwrap().move_left();
-        //         // ed.buf_mut().unwrap().delete_char();
-        //     }),
-        //     keybind!(Insert, Escape, NoMod, |ed| {
-        //         ed.set_mode(Mode::Normal);
-        //         ed.buf_mut().unwrap().move_left();
-        //     }),
-        //
-        // ];
+
+
 
 
 

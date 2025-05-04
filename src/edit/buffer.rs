@@ -1,5 +1,5 @@
 use std::io::Write;
-use std::{fs, io};
+use std::{fs, io, path};
 use std::path::{PathBuf, Path};
 use std::collections::BTreeMap;
 
@@ -51,7 +51,7 @@ impl Buffers {
 
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash)]
 pub struct Cursor {
     // cursor must be signed for out-of-bounds checking
     pub x: isize,
@@ -101,9 +101,9 @@ impl Buffer {
     //
 
     pub fn with_file(path: impl AsRef<Path>) -> io::Result<Self> {
-        let mut s = Self::new();
-        s.load_file(path);
-        Ok(s)
+        let mut self_ = Self::new();
+        self_.load_file(path)?;
+        Ok(self_)
     }
 
     pub fn new() -> Self {
@@ -115,15 +115,16 @@ impl Buffer {
         }
     }
 
-    // TODO:
-    pub fn set_filename(&mut self) {
-        todo!();
+    pub fn set_filename(&mut self, filename: impl AsRef<Path>) -> io::Result<()> {
+        // using absolute() instead of canonicalize() as
+        // `filename` could possibly not exist yet
+        self.filename = Some(path::absolute(filename)?);
+        Ok(())
     }
 
     pub fn load_buffer(&mut self, buf: Vec<String>) {
-        // TODO: consider using *self = Self::new() for reset
+        *self = Self::new();
 
-        self.cur = Cursor::default();
         self.lines = buf;
 
         let is_empty = self.lines.is_empty();
@@ -133,46 +134,33 @@ impl Buffer {
             self.lines.push(String::new());
         }
 
-        self.filename = None;
-
     }
 
-    pub fn load_file(&mut self, path: impl AsRef<Path>) {
-        // TODO: consider using load_buffer() in here
+    pub fn load_file(&mut self, path: impl AsRef<Path>) -> io::Result<()> {
         let path = path.as_ref();
 
-        // using absolute() instead of canonicalize() as
-        // `filename` could possibly not exist yet
-        let pathbuf = std::path::absolute(path).unwrap();
+        self.set_filename(path)?;
 
-        self.cur = Cursor::default();
-        self.lines = if fs::exists(path).unwrap() {
-            fs::read_to_string(path).unwrap()
+        let lines = if fs::exists(path)? {
+            fs::read_to_string(path)?
                 .lines()
-                .map(|line| line.to_string())
+                .map(str::to_string)
                 .collect()
         } else {
             Vec::new()
         };
 
-        let is_empty = self.lines.is_empty();
-        self.append = is_empty;
+        self.load_buffer(lines);
 
-        if is_empty {
-            self.lines.push(String::new());
-        }
-
-        self.filename = Some(pathbuf);
-
-    }
-
-    pub fn save_to_loaded_file(&self) -> io::Result<()> {
-        // TODO: dont unwrap, there could be no file loaded
-        self.save_to_file(self.filename.as_ref().unwrap())?;
         Ok(())
+
     }
 
-    // TODO: inform caller if nothing was saved using returntype
+    /// Returns `None` if the buffer is not backed by any file.
+    pub fn save_to_loaded_file(&self) -> Option<io::Result<()>> {
+        Some(self.save_to_file(self.filename.as_ref()?))
+    }
+
     pub fn save_to_file(&self, filename: impl AsRef<Path>) -> io::Result<()> {
 
         if self.getlines().is_empty() {

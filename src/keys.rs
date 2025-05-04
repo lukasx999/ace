@@ -13,7 +13,7 @@ use crate::edit::{Mode, Editor};
 
 
 bitflags! {
-    #[derive(Debug, Clone, Copy, PartialEq)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub struct Modifiers: u8 {
         const NoMod = 0;
         const Shift = 1;
@@ -50,7 +50,7 @@ impl Modifiers {
 
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Key {
     pub key_code: KeyCode,
     pub mods: Modifiers,
@@ -81,7 +81,7 @@ macro_rules! keybind {
     };
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub struct Keybind {
     // TODO: key-chord
     pub mode: Mode,

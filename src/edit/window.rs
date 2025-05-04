@@ -10,17 +10,17 @@ pub type WindowID = usize;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Window {
-    pub bufid: Option<BufferID>,
+    pub buf: Option<BufferID>,
 }
 
 impl Window {
 
     pub fn new(buf: BufferID) -> Self {
-        Self { bufid: Some(buf) }
+        Self { buf: Some(buf) }
     }
 
     pub fn use_buf(&mut self, id: BufferID) {
-        self.bufid = Some(id);
+        self.buf = Some(id);
     }
 
 }

@@ -1,4 +1,5 @@
 use std::{fmt::Display, sync::mpsc::Sender};
+use std::io;
 use std::path::Path;
 
 pub mod buffer;
@@ -58,15 +59,16 @@ impl Editor {
         Self {
             event_tx,
             messages: Vec::new(),
-            windows:  Windows::with_buffer(0),
+            windows:  Windows::default(),
             buffers:  Buffers::default(),
             mode:     Mode::default(),
         }
     }
 
-    pub fn with_file(event_tx: Sender<EventData>, path: impl AsRef<Path>) -> std::io::Result<Self> {
+    pub fn with_file(event_tx: Sender<EventData>, path: impl AsRef<Path>) -> io::Result<Self> {
         Ok(Self {
             buffers: Buffers::with_file(path)?,
+            windows: Windows::with_buffer(0),
             ..Self::new(event_tx)
         })
     }
@@ -94,7 +96,7 @@ impl Editor {
 
     #[must_use]
     pub fn bufid(&self) -> Option<BufferID> {
-        self.windows().current()?.bufid
+        self.windows().current()?.buf
     }
 
     #[must_use]
