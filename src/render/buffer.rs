@@ -67,6 +67,11 @@ impl BufferRenderer {
         self.fontsize = fontsize;
     }
 
+    #[must_use]
+    pub fn fontsize(&self) -> u16 {
+        self.fontsize
+    }
+
     fn empty_column_width(&self) -> f32 {
         measure_char('X', Some(&self.font), self.fontsize, 1.).width
     }

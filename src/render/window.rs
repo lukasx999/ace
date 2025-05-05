@@ -10,7 +10,7 @@ use super::{buffer::BufferRenderer, COLOR_WIDGET_AREA, COLOR_WIDGET_AREA_SEL};
 
 #[derive(Debug, Clone)]
 pub struct WindowRenderer {
-    buf: BufferRenderer,
+    pub buf: BufferRenderer,
 }
 
 impl WindowRenderer {

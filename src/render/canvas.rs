@@ -7,7 +7,7 @@ use super::window::WindowRenderer;
 
 #[derive(Debug, Clone)]
 pub struct CanvasRenderer {
-    win: WindowRenderer,
+    pub win: WindowRenderer,
 }
 
 impl CanvasRenderer {

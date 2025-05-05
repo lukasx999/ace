@@ -39,8 +39,8 @@ use statusline::StatuslineRenderer;
 
 #[derive(Debug, Clone)]
 pub struct Renderer {
-    canvas: CanvasRenderer,
-    statusline: StatuslineRenderer,
+    pub canvas: CanvasRenderer,
+    pub statusline: StatuslineRenderer,
     padding: f32,
 }
 

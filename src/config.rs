@@ -138,6 +138,16 @@ pub fn configure(app: &mut Application) {
         app.ed.buf_mut().unwrap().move_left();
     });
 
+    app.config.keymap(keybind!(Normal, Period, NoMod), |app| {
+        let buf = &mut app.renderer.canvas.win.buf;
+        buf.set_fontsize(buf.fontsize() + 1);
+    });
+
+    app.config.keymap(keybind!(Normal, Comma, NoMod), |app| {
+        let buf = &mut app.renderer.canvas.win.buf;
+        buf.set_fontsize(buf.fontsize() - 1);
+    });
+
         //
         //     keybind!(Normal, X,    NoMod, |ed| ed.buf_mut().unwrap().delete_char()),
         //     keybind!(Normal, Key0, NoMod, |ed| ed.buf_mut().unwrap().move_start_line()),
