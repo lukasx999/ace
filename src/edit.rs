@@ -8,7 +8,7 @@ pub mod event;
 use event::EventData;
 
 use buffer::{Buffer, Buffers, BufferID};
-use window::{Windows, WindowID};
+use window::{Windows, WindowID, Window};
 
 
 
@@ -43,11 +43,12 @@ impl Statusline {
     }
 }
 
+pub type Message = String;
 
 #[derive(Debug, Clone)]
 pub struct Editor {
     event_tx: Sender<EventData>,
-    messages: Vec<String>,
+    messages: Vec<Message>,
     buffers:  Buffers,
     mode:     Mode,
     windows:  Windows,
@@ -73,10 +74,13 @@ impl Editor {
         })
     }
 
-    pub fn add_message(&mut self, str: String) {
-        self.messages.push(str);
+    /// Add a [`Message`] to the Editors message buffer.
+    pub fn add_message(&mut self, msg: Message) {
+        self.messages.push(msg);
     }
 
+    /// Dump all [`Message`]s into a newly created [`Buffer`], which is contained
+    /// in a newly created [`Window`]
     pub fn show_messages(&mut self) {
         let id = self.buffers.add();
         self.windows.add(Some(id));
@@ -89,14 +93,17 @@ impl Editor {
             .load_buffer(messages);
     }
 
+    /// Retrieves the [`WindowID`] of the currently focused [`Window`]
     #[must_use]
     pub fn winid(&self) -> Option<WindowID> {
         self.windows().winid()
     }
 
     #[must_use]
+    /// Retrieves the [`BufferID`] of the currently focused [`Buffer`]
     pub fn bufid(&self) -> Option<BufferID> {
-        self.windows().current()?.buf
+        let id = self.windows().winid()?;
+        self.windows.get(id)?.buf()
     }
 
     #[must_use]

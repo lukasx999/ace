@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 
 use std::path::{PathBuf, Path};
 use std::sync::mpsc;
@@ -8,7 +8,7 @@ mod edit;
 mod config;
 mod wrap;
 
-use render::Renderer;
+use render::GuiRenderer;
 use edit::{Editor, Mode};
 use edit::event::EventData;
 use wrap::*;
@@ -42,7 +42,7 @@ struct Application {
     event_queue: mpsc::Receiver<EventData>,
     config: Config,
     should_quit: bool,
-    renderer: Renderer,
+    renderer: GuiRenderer,
 }
 
 impl Application {
@@ -60,7 +60,7 @@ impl Application {
         let mut self_ = Self {
             event_queue:  rx,
             should_quit:  false,
-            renderer:     Renderer::new().await?,
+            renderer:     GuiRenderer::new().await?,
             config:       Config::default(),
             ed,
         };

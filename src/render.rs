@@ -35,16 +35,14 @@ use statusline::StatuslineRenderer;
 // |                                statusbar                            |
 // +---------------------------------------------------------------------+
 
-
-
 #[derive(Debug, Clone)]
-pub struct Renderer {
+pub struct GuiRenderer {
     pub canvas: CanvasRenderer,
     pub statusline: StatuslineRenderer,
     padding: f32,
 }
 
-impl Renderer {
+impl GuiRenderer {
 
     pub async fn new() -> Result<Self, macroquad::Error> {
         Ok(Self {

@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 
 
 
-/// Each buffer has an identifier thats unique in one editor session.
+/// Each buffer has an identifier which is unique in one editor session.
 pub type BufferID = usize;
 
 
@@ -13,7 +13,7 @@ pub type BufferID = usize;
 #[derive(Debug, Clone, Default)]
 pub struct Buffers {
     idcount: BufferID,
-    /// Using btreemap, as the data should always be in order.
+    /// Using [`BTreeMap`], as the data should always be in order.
     buffers: BTreeMap<BufferID, Buffer>,
 }
 
@@ -122,6 +122,7 @@ impl Buffer {
         Ok(())
     }
 
+    /// Wipes the buffer, loading the given buffer.
     pub fn load_buffer(&mut self, buf: Vec<String>) {
         *self = Self::new();
 
@@ -136,6 +137,7 @@ impl Buffer {
 
     }
 
+    /// Wipes the buffer, loading a buffer from the file at the given path.
     pub fn load_file(&mut self, path: impl AsRef<Path>) -> io::Result<()> {
         let path = path.as_ref();
 
@@ -156,7 +158,7 @@ impl Buffer {
 
     }
 
-    /// Returns `None` if the buffer is not backed by any file.
+    /// Returns [`None`] if the buffer is not backed by any file.
     pub fn save_to_loaded_file(&self) -> Option<io::Result<()>> {
         Some(self.save_to_file(self.filename.as_ref()?))
     }
@@ -222,7 +224,7 @@ impl Buffer {
         &self.lines[self.cur.y as usize]
     }
 
-    /// Returns `None` if cursor is out-of-bounds (append mode)
+    /// Returns [`None`] if cursor is out-of-bounds (append mode)
     /// in which case the cursor is not pointing to any valid char
     #[must_use]
     pub fn getchar(&self) -> Option<char> {
@@ -377,15 +379,21 @@ impl Buffer {
     // Miscellaneous
     //
 
-    pub fn search(&self, str: impl AsRef<str>) -> Vec<usize> {
+    /// Searches the buffer for all occurances of the given substring.
+    /// Returns a Vec of indices to the start of the found substrings.
+    pub fn search_simple(&self, str: impl AsRef<str>) -> Vec<usize> {
         let str = str.as_ref();
 
-        // TODO: properly implement
         self.lines
             .iter()
             // TODO: what about multiple search results? maybe use regex?
             .filter_map(|line| line.find(str))
             .collect()
+    }
+
+    // TODO: regex search
+    pub fn search_regex(&self) {
+        todo!()
     }
 
 }

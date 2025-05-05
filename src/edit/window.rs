@@ -4,32 +4,16 @@ use super::buffer::BufferID;
 
 
 
-/// Each window has an identifier thats unique in one editor session.
+/// Each window has an identifier which is unique in one editor session.
 pub type WindowID = usize;
 
 
-#[derive(Debug, Clone, Copy, Default)]
-pub struct Window {
-    pub buf: Option<BufferID>,
-}
-
-impl Window {
-
-    pub fn new(buf: BufferID) -> Self {
-        Self { buf: Some(buf) }
-    }
-
-    pub fn use_buf(&mut self, id: BufferID) {
-        self.buf = Some(id);
-    }
-
-}
 
 #[derive(Debug, Clone, Default)]
 pub struct Windows {
     pub current: WindowID,
     pub idcount: WindowID,
-    /// Using btreemap, as the data should always be in order.
+    /// Using [`BTreeMap`], as the data should always be in order.
     pub windows: BTreeMap<WindowID, Window>,
 }
 
@@ -43,6 +27,7 @@ impl Windows {
         }
     }
 
+    /// Retrieves the [`WindowID`] of the currently focused [`Window`]
     #[must_use]
     pub fn winid(&self) -> Option<WindowID> {
         if self.windows.is_empty() {
@@ -62,16 +47,6 @@ impl Windows {
         self.windows.get_mut(&id)
     }
 
-    #[must_use]
-    pub fn current(&self) -> Option<&Window> {
-        self.windows.get(&self.winid()?)
-    }
-
-    #[must_use]
-    pub fn current_mut(&mut self) -> Option<&mut Window> {
-        self.windows.get_mut(&self.winid()?)
-    }
-
     pub fn add(&mut self, id: Option<BufferID>) -> WindowID {
         let win = if let Some(id) = id {
             Window::new(id)
@@ -86,6 +61,7 @@ impl Windows {
         id
     }
 
+    /// Deletes the currently focused [`Window`]
     pub fn delete(&mut self) {
         if self.windows.is_empty() { return }
 
@@ -97,6 +73,7 @@ impl Windows {
         self.idcount = self.idcount.clamp(0, max);
     }
 
+    /// Cycles to the next [`Window`]
     pub fn next(&mut self, wrap: bool) {
 
         self.current += 1;
@@ -108,6 +85,7 @@ impl Windows {
         }
     }
 
+    /// Cycles to the previous [`Window`]
     pub fn prev(&mut self, wrap: bool) {
         // BUG: switch to hashmap
         self.current = self.current
@@ -122,7 +100,27 @@ impl Windows {
 
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Window {
+    buf: Option<BufferID>,
+}
 
+impl Window {
+
+    pub fn new(buf: BufferID) -> Self {
+        Self { buf: Some(buf) }
+    }
+
+    #[must_use]
+    pub fn buf(&self) -> Option<BufferID> {
+        self.buf
+    }
+
+    pub fn set_buf(&mut self, id: BufferID) {
+        self.buf = Some(id);
+    }
+
+}
 
 #[cfg(test)]
 mod tests {
