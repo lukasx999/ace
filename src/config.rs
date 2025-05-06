@@ -98,8 +98,9 @@ pub fn configure(app: &mut Application) {
             let linecount    = buf.getlines().len();
             let search_query = &buf.search_query;
             let search_count = buf.search().len();
+            let clipboard    = buf.clipboard.len();
             Statusline::new(
-                format!("{mode} {append} | {filename} | {search_query} ({search_count})"),
+                format!("{mode} {append} | {filename} | {search_query} ({search_count}) | Clipboard: {clipboard}"),
                 format!("{linecount} Lines | {line}:{char}"),
                 format!("{buf_count} Buffers | {win}/{win_count} Windows")
             )
@@ -119,6 +120,9 @@ pub fn configure(app: &mut Application) {
         dbg!(data);
     });
 
+    app.config.keymap(keybind!(Normal, P, Shift), |app| app.ed.buf_mut().unwrap().paste());
+    app.config.keymap(keybind!(Normal, P, NoMod), |app| app.ed.buf_mut().unwrap().paste_pop());
+    app.config.keymap(keybind!(Normal, Y, NoMod), |app| app.ed.buf_mut().unwrap().yank_line());
     app.config.keymap(keybind!(Normal, J, NoMod), |app| app.ed.buf_mut().unwrap().move_down());
     app.config.keymap(keybind!(Normal, K, NoMod), |app| app.ed.buf_mut().unwrap().move_up());
     app.config.keymap(keybind!(Normal, L, NoMod), |app| app.ed.buf_mut().unwrap().move_right());
@@ -171,8 +175,8 @@ pub fn configure(app: &mut Application) {
     app.config.keymap(keybind!(Normal, Key4, Shift), |app| buf!(app).move_end_line());
     app.config.keymap(keybind!(Normal, W, Shift), |app| { app.ed.windows_mut().add(None); });
     app.config.keymap(keybind!(Normal, X, Shift), |app| app.ed.windows_mut().delete());
-    app.config.keymap(keybind!(Normal, N, Shift), |app| app.ed.windows_mut().next(true));
-    app.config.keymap(keybind!(Normal, P, Shift), |app| app.ed.windows_mut().prev(true));
+    // app.config.keymap(keybind!(Normal, N, Shift), |app| app.ed.windows_mut().next(true));
+    // app.config.keymap(keybind!(Normal, P, Shift), |app| app.ed.windows_mut().prev(true));
     app.config.keymap(keybind!(Normal, Z, Shift), |app| { app.ed.buffers_mut().add(); });
     app.config.keymap(keybind!(Normal, A, NoMod), |app| {
         let buf = buf!(app);

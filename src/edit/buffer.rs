@@ -21,7 +21,7 @@ impl Buffers {
 
     pub fn with_file(path: impl AsRef<Path>) -> io::Result<Self> {
         Ok(Self {
-            buffers: BTreeMap::from([ (0, Buffer::with_file(path)?) ]),
+            buffers: [ (0, Buffer::with_file(path)?) ].into(),
             idcount: 1
         })
     }
@@ -93,11 +93,14 @@ pub struct Selection {
 
 // TODO: implement kill ring and permanent clipboard
 
+// TODO: move mode into buffer struct instead of editor
+
 #[derive(Debug, Clone)]
 pub struct Buffer {
     filename: Option<PathBuf>,
     cursor: Cursor,
     lines: Vec<String>,
+    pub clipboard: Vec<String>,
 
     pub search_query: String,
 
@@ -122,6 +125,7 @@ impl Buffer {
 
     pub fn new() -> Self {
         Self {
+            clipboard: Vec::new(),
             search_query: "foo".to_string(),
             filename: None,
             cursor: Cursor::default(),
@@ -294,6 +298,24 @@ impl Buffer {
         self.move_down();
     }
 
+    /// Pops from the Killring
+    pub fn paste_pop(&mut self) {
+        self.newline_below();
+        self.move_down();
+        if let Some(str) = self.clipboard.pop() {
+            self.insert_string(str);
+        }
+    }
+
+    /// Pastes the from the Killring, without popping
+    pub fn paste(&mut self) {
+        self.newline_below();
+        self.move_down();
+        if let Some(str) = self.clipboard.last() {
+            self.insert_string(str.clone());
+        }
+    }
+
     //
     // Deletion API
     //
@@ -303,7 +325,13 @@ impl Buffer {
         self.check_cursor();
     }
 
+    pub fn yank_line(&mut self) {
+        self.clipboard.push(self.getline().to_string());
+    }
+
     pub fn delete_line(&mut self) {
+
+        self.clipboard.push(self.getline().to_string());
 
         if self.lines.len() == 1 {
             self.clear_current_line();
