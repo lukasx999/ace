@@ -122,7 +122,7 @@ impl BufferRenderer {
         );
     }
 
-    fn draw_linenumbers(&mut self, args: &BufferRenderArgs, i: usize) {
+    fn draw_gutter(&mut self, args: &BufferRenderArgs, i: usize) {
 
         let bounds = args.bounds_linenumbers;
 
@@ -176,7 +176,7 @@ impl BufferRenderer {
                 args.bounds_buf.w
             );
 
-            self.draw_linenumbers(args, i);
+            self.draw_gutter(args, i);
 
         }
     }
@@ -223,7 +223,7 @@ impl BufferRenderer {
 
         let column_len = self.textwidth(buf.getlines().len().to_string()) + self.empty_column_width();
 
-        let bounds_linenumbers = Rect { w: column_len, ..bounds };
+        let bounds_gutter = Rect { w: column_len, ..bounds };
 
         let bounds_buf = Rect {
             x: bounds.x + column_len,
@@ -250,7 +250,7 @@ impl BufferRenderer {
             linecount_vis,
             charcount_vis,
             bounds_buf,
-            bounds_linenumbers,
+            bounds_linenumbers: bounds_gutter,
             virt,
             params,
         };
