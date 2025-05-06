@@ -65,6 +65,13 @@ impl Config {
 }
 
 
+// TODO: refactor into function
+macro_rules! buf {
+    ($app:expr) => {
+        $app.ed.buf_mut().unwrap()
+    }
+}
+
 
 pub fn configure(app: &mut Application) {
 
@@ -77,7 +84,7 @@ pub fn configure(app: &mut Application) {
         let win_count = ed.windows().count();
 
         if let Some(buf) = ed.buf() {
-            let filename = match buf.filename.as_ref() {
+            let filename = match buf.filename().as_ref() {
                 Some(path) => path
                     .file_name()
                     .unwrap()
@@ -85,12 +92,14 @@ pub fn configure(app: &mut Application) {
                     .unwrap(),
                 None => "<mem>",
             };
-            let line      = buf.cur.y + 1;
-            let char      = buf.cur.x + 1;
-            let append    = if buf.append { "[A]" } else { "[_]" };
-            let linecount = buf.getlines().len();
+            let line         = buf.cursor().y + 1;
+            let char         = buf.cursor().x + 1;
+            let append       = if buf.append { "[A]" } else { "[_]" };
+            let linecount    = buf.getlines().len();
+            let search_query = &buf.search_query;
+            let search_count = buf.search().len();
             Statusline::new(
-                format!("{mode} {append} | {filename}"),
+                format!("{mode} {append} | {filename} | {search_query} ({search_count})"),
                 format!("{linecount} Lines | {line}:{char}"),
                 format!("{buf_count} Buffers | {win}/{win_count} Windows")
             )
@@ -130,7 +139,15 @@ pub fn configure(app: &mut Application) {
     app.config.keymap(keybind!(Normal, Q, NoMod), |app| app.quit());
 
     app.config.keymap(keybind!(Insert, Backspace, NoMod), |app| {
-        app.ed.buf_mut().unwrap().delete_char_before();
+        let buf = buf!(app);
+        let append = buf.append;
+
+        buf.move_left();
+        buf.delete_char();
+
+        if append {
+            buf.move_append_end_line();
+        }
     });
 
     app.config.keymap(keybind!(Insert, Escape, NoMod), |app| {
@@ -148,61 +165,45 @@ pub fn configure(app: &mut Application) {
         buf.set_fontsize(buf.fontsize() - 1);
     });
 
-        //
-        //     keybind!(Normal, X,    NoMod, |ed| ed.buf_mut().unwrap().delete_char()),
-        //     keybind!(Normal, Key0, NoMod, |ed| ed.buf_mut().unwrap().move_start_line()),
-        //     keybind!(Normal, Key4, Shift, |ed| ed.buf_mut().unwrap().move_end_line()),
-        //
-        //     keybind!(Normal, W, Shift, |ed| { ed.windows_mut().add(None); }),
-        //     keybind!(Normal, U, Shift, |ed| ed.windows_mut().current_mut().unwrap().use_buf(0)),
-        //     keybind!(Normal, X, Shift, |ed| ed.windows_mut().delete()),
-        //     keybind!(Normal, N, Shift, |ed| ed.windows_mut().next(true)),
-        //     keybind!(Normal, P, Shift, |ed| ed.windows_mut().prev(true)),
-        //
-        //
-        //     keybind!(Normal, Z, Shift, |ed| { ed.buffers_mut().add(); }),
-        //
-        //
-        //     keybind!(Normal, A, NoMod, |ed| {
-        //         ed.buf_mut().unwrap().move_right();
-        //         ed.set_mode(Mode::Insert);
-        //     }),
-        //
-        //
-        //     keybind!(Normal, A, Shift, |ed| {
-        //         ed.buf_mut().unwrap().move_append_end_line();
-        //         ed.set_mode(Mode::Insert);
-        //     }),
-        //
-        //
-        //     keybind!(Normal, O, Shift, |ed| {
-        //         ed.buf_mut().unwrap().newline_above();
-        //         ed.set_mode(Mode::Insert);
-        //     }),
-        //
-        //     keybind!(Normal, O, NoMod, |ed| {
-        //         ed.buf_mut().unwrap().newline_below();
-        //         ed.buf_mut().unwrap().move_down();
-        //         ed.set_mode(Mode::Insert);
-        //     }),
-        //
-        //     // keybind!(Normal, R, NoMod, |ed| ed.run_line()),
-        //
-        //
-        //     keybind!(Insert, U, Ctrl, |ed| ed.buf_mut().unwrap().clear_current_line()),
-        //     keybind!(Insert, Enter, NoMod, |ed| ed.buf_mut().unwrap().split_newline()),
-        //     keybind!(Insert, Tab, NoMod, |ed| {
-        //         // TODO: appending tab at end of line not working correctly
-        //         let buf = ed.buf_mut().unwrap();
-        //         buf.insert_string("    ");
-        //         buf.move_right();
-        //         buf.move_right();
-        //         buf.move_right();
-        //         buf.move_right();
-        //     }),
 
+    app.config.keymap(keybind!(Normal, X,    NoMod), |app| buf!(app).delete_char());
+    app.config.keymap(keybind!(Normal, Key0, NoMod), |app| buf!(app).move_start_line());
+    app.config.keymap(keybind!(Normal, Key4, Shift), |app| buf!(app).move_end_line());
+    app.config.keymap(keybind!(Normal, W, Shift), |app| { app.ed.windows_mut().add(None); });
+    app.config.keymap(keybind!(Normal, X, Shift), |app| app.ed.windows_mut().delete());
+    app.config.keymap(keybind!(Normal, N, Shift), |app| app.ed.windows_mut().next(true));
+    app.config.keymap(keybind!(Normal, P, Shift), |app| app.ed.windows_mut().prev(true));
+    app.config.keymap(keybind!(Normal, Z, Shift), |app| { app.ed.buffers_mut().add(); });
+    app.config.keymap(keybind!(Normal, A, NoMod), |app| {
+        let buf = buf!(app);
+        // not working correctly when on last char
+        buf.append = true;
+        buf.move_right();
+        app.ed.set_mode(Mode::Insert);
+    });
+    app.config.keymap(keybind!(Normal, A, Shift), |app| { buf!(app).move_append_end_line(); app.ed.set_mode(Mode::Insert); });
+    app.config.keymap(keybind!(Normal, O, Shift), |app| { buf!(app).newline_above(); app.ed.set_mode(Mode::Insert); });
+    app.config.keymap(keybind!(Normal, O, NoMod), |app| {
+        buf!(app).newline_below();
+        buf!(app).move_down();
+        app.ed.set_mode(Mode::Insert);
+    });
+    app.config.keymap(keybind!(Insert, U, Ctrl), |app| buf!(app).clear_current_line());
+    app.config.keymap(keybind!(Insert, Enter, NoMod), |app| buf!(app).split_newline());
 
+    app.config.keymap(keybind!(Normal, U, Shift), |app| {
+        let id = app.ed.winid().unwrap();
+        let win = app.ed.windows_mut().get_mut(id).unwrap();
+        win.set_buf(0);
+    });
 
-
+    app.config.keymap(keybind!(Insert, Tab, NoMod), |app| {
+        let buf = buf!(app);
+        buf.insert_string("    ");
+        buf.move_right();
+        buf.move_right();
+        buf.move_right();
+        buf.move_right();
+    });
 
 }

@@ -12,6 +12,8 @@ const FONTSIZE:         u16   = 30;
 
 
 
+// TODO: implement
+// different cursor shapes for different modes
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CursorShape {
     #[default] Block,
@@ -99,7 +101,7 @@ impl BufferRenderer {
         self.draw_line_cursor(args.bounds_buf, fontsize, args.virt.y);
 
         // width of all chars leading up to cursor
-        let line = &args.buf.lines[args.buf.cur.y as usize];
+        let line = &args.buf.getlines()[args.buf.cursor().y as usize];
         let widthsum = self.textwidth(&line[..args.virt.x as usize]);
 
         // width of current char
@@ -125,7 +127,7 @@ impl BufferRenderer {
         let bounds = args.bounds_linenumbers;
 
         let abs = i + self.buf_offset.y as usize;
-        let is_current = args.buf.cur.y as usize == abs;
+        let is_current = args.buf.cursor().y as usize == abs;
 
         let linenum = match self.mode {
             LineNumberMode::Absolute => abs + 1,
@@ -133,7 +135,7 @@ impl BufferRenderer {
             if is_current {
                 abs + 1
             } else {
-                abs.abs_diff(args.buf.cur.y as usize)
+                abs.abs_diff(args.buf.cursor().y as usize)
             },
         };
 
@@ -158,7 +160,7 @@ impl BufferRenderer {
         let len = (y + args.linecount_vis)
             .min(args.buf.getlines().len());
 
-        let lines = &args.buf.lines[y..len];
+        let lines = &args.buf.getlines()[y..len];
 
         for (i, line) in lines.iter().enumerate() {
 
@@ -179,33 +181,34 @@ impl BufferRenderer {
         }
     }
 
-
     fn check_cursor_x(&mut self, args: &BufferRenderArgs) {
 
-        let diffx = args.virt.x - args.charcount_vis as isize;
+        // TODO:
+        let diff = args.virt.x - args.charcount_vis as isize + 1;
 
-        if diffx >= 0 {
-            self.buf_offset.x += diffx + 1;
+        if diff > 0 {
+            self.buf_offset.x += diff;
         }
 
         if args.virt.x < 0 {
             self.buf_offset.x += args.virt.x;
         }
+
     }
 
     fn check_cursor_y(&mut self, args: &BufferRenderArgs) {
 
         // if cursor is out-of-bounds, move it back by how much it moved out-of-bounds
-        let diff = args.virt.y - args.linecount_vis as isize;
-        // always jump by at least one,
-        // as otherwise offset will not change when diff is 0
-        if diff >= 0 {
-            self.buf_offset.y += diff + 1;
+        let diff = args.virt.y - args.linecount_vis as isize + 1;
+
+        if diff > 0 {
+            self.buf_offset.y += diff;
         }
 
         if args.virt.y < 0 {
             self.buf_offset.y += args.virt.y;
         }
+
     }
 
     pub fn render(&mut self, bounds: Rect, buf: &Buffer, mode: Mode, active: bool) {
@@ -228,19 +231,18 @@ impl BufferRenderer {
             ..bounds
         };
 
-
-
         // the amount of lines that can fit onto the screen
         let linecount_vis = ((bounds_buf.h / self.fontsize as f32) as usize)
-            .min(buf.lines.len());
+            .min(buf.getlines().len());
 
         // the amount of chars that can fit onto the current line
-        // TODO: refactor clamp slice
-        let charcount_vis = clamp_slice(buf.getline(), bounds_buf.w, params.clone()).len();
+        // TODO: support for non-monospace fonts
+        // let charcount_vis = clamp_slice(buf.getline(), bounds_buf.w, params.clone()).len();
+        let charcount_vis = (bounds_buf.w / self.empty_column_width()) as usize;
 
         // absolute cursor position mapped to the
         // actual visible bounds of the buffer (virtual cursor)
-        let virt = buf.cur - self.buf_offset;
+        let virt = buf.cursor() - self.buf_offset;
 
         let mut args = BufferRenderArgs {
             buf,
@@ -258,8 +260,7 @@ impl BufferRenderer {
 
         // recalculate cursor, if offset changed, otherwise there will be
         // a cursor jumping effect at the top and bottom
-        args.virt = buf.cur - self.buf_offset;
-
+        args.virt = buf.cursor() - self.buf_offset;
 
         if active {
             self.draw_cursor(&args);

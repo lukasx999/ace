@@ -64,6 +64,12 @@ impl Cursor {
     }
 }
 
+impl From<(isize, isize)> for Cursor {
+    fn from(value: (isize, isize)) -> Self {
+        Self::new(value.0, value.1)
+    }
+}
+
 impl std::ops::Sub for Cursor {
     type Output = Self;
     fn sub(self, rhs: Self) -> Self::Output {
@@ -79,14 +85,22 @@ impl std::ops::Add for Cursor {
 }
 
 
+// TODO:
+#[derive(Debug, Clone)]
+pub struct Selection {
+    target: Cursor,
+}
 
 // TODO: implement kill ring and permanent clipboard
 
 #[derive(Debug, Clone)]
 pub struct Buffer {
-    pub filename: Option<PathBuf>,
-    pub cur: Cursor,
-    pub lines: Vec<String>,
+    filename: Option<PathBuf>,
+    cursor: Cursor,
+    lines: Vec<String>,
+
+    pub search_query: String,
+
     /// allows the cursor to be out-of-bounds
     /// by one char at the end of the line.
     /// used by `A`, and `a` at end of a line.
@@ -108,8 +122,9 @@ impl Buffer {
 
     pub fn new() -> Self {
         Self {
+            search_query: "foo".to_string(),
             filename: None,
-            cur: Cursor::default(),
+            cursor: Cursor::default(),
             lines: vec![ String::new() ],
             append: true,
         }
@@ -193,19 +208,19 @@ impl Buffer {
         // as it may hold an invalid value, such that indexing into
         // the lines vec may panic
         let max_line = self.lines.len() as isize - 1;
-        self.cur.y = self.cur.y
+        self.cursor.y = self.cursor.y
             .clamp(0, max_line);
 
         let len = self.getline().len() as isize;
 
         if self.getline().is_empty() {
             self.append = true;
-        } else if self.cur.x != len {
+        } else if self.cursor.x != len {
             self.append = false;
         }
 
         let max_char = if self.append { len } else { len - 1 };
-        self.cur.x = self.cur.x
+        self.cursor.x = self.cursor.x
             .clamp(0, max_char);
 
     }
@@ -215,22 +230,32 @@ impl Buffer {
     //
 
     #[must_use]
+    pub fn filename(&self) -> Option<&Path> {
+        self.filename.as_deref()
+    }
+
+    #[must_use]
+    pub fn cursor(&self) -> Cursor {
+        self.cursor
+    }
+
+    #[must_use]
     pub fn getlines(&self) -> &[String] {
         &self.lines
     }
 
     #[must_use]
     pub fn getline(&self) -> &str {
-        &self.lines[self.cur.y as usize]
+        &self.lines[self.cursor.y as usize]
     }
 
     /// Returns [`None`] if cursor is out-of-bounds (append mode)
     /// in which case the cursor is not pointing to any valid char
     #[must_use]
     pub fn getchar(&self) -> Option<char> {
-        self.lines[self.cur.y as usize]
+        self.lines[self.cursor.y as usize]
             .chars()
-            .nth(self.cur.x as usize)
+            .nth(self.cursor.x as usize)
     }
 
     //
@@ -238,33 +263,33 @@ impl Buffer {
     //
 
     pub fn newline_above(&mut self) {
-        self.lines.insert(self.cur.y as usize, String::new());
+        self.lines.insert(self.cursor.y as usize, String::new());
         // cursor will be on the newly inserted line,
         // and could therefore be out-of-bounds
         self.check_cursor();
     }
 
     pub fn newline_below(&mut self) {
-        self.lines.insert(self.cur.y as usize + 1, String::new());
+        self.lines.insert(self.cursor.y as usize + 1, String::new());
     }
 
     pub fn insert_string(&mut self, str: impl AsRef<str>) {
-        self.lines[self.cur.y as usize]
-            .insert_str(self.cur.x as usize, str.as_ref());
+        self.lines[self.cursor.y as usize]
+            .insert_str(self.cursor.x as usize, str.as_ref());
     }
 
     pub fn insert_char(&mut self, c: char) {
-        self.lines[self.cur.y as usize]
-            .insert(self.cur.x as usize, c);
+        self.lines[self.cursor.y as usize]
+            .insert(self.cursor.x as usize, c);
     }
 
     /// Splits the text at the cursor into two lines.
     /// Intended to be used in insert mode.
     pub fn split_newline(&mut self) {
-        let line = &mut self.lines[self.cur.y as usize];
+        let line = &mut self.lines[self.cursor.y as usize];
 
-        let str = line.split_off(self.cur.x as usize);
-        self.lines.insert(self.cur.y as usize + 1, str);
+        let str = line.split_off(self.cursor.x as usize);
+        self.lines.insert(self.cursor.y as usize + 1, str);
         self.move_start_line();
         self.move_down();
     }
@@ -274,7 +299,7 @@ impl Buffer {
     //
 
     pub fn clear_current_line(&mut self) {
-        self.lines[self.cur.y as usize].clear();
+        self.lines[self.cursor.y as usize].clear();
         self.check_cursor();
     }
 
@@ -283,33 +308,18 @@ impl Buffer {
         if self.lines.len() == 1 {
             self.clear_current_line();
         } else {
-            self.lines.remove(self.cur.y as usize);
+            self.lines.remove(self.cursor.y as usize);
             self.check_cursor();
         }
 
-    }
-
-    /// Moves to the left and deletes the current character.
-    /// Intended for use with the backspace key in insert mode.
-    /// This is a separate function, because we need to move back to the end
-    /// of the line if we were in append mode.
-    pub fn delete_char_before(&mut self) {
-        let append = self.append;
-
-        self.move_left();
-        self.delete_char();
-
-        if append {
-            self.move_append_end_line();
-        }
     }
 
     /// Deletes the character at the cursor
     pub fn delete_char(&mut self) {
         if self.getline().is_empty() { return }
 
-        self.lines[self.cur.y as usize]
-            .remove(self.cur.x as usize);
+        self.lines[self.cursor.y as usize]
+            .remove(self.cursor.x as usize);
         self.check_cursor();
     }
 
@@ -318,47 +328,47 @@ impl Buffer {
     //
 
     pub fn move_down_many(&mut self, count: isize) {
-        self.cur.y += count;
+        self.cursor.y += count;
         self.check_cursor();
     }
 
     pub fn move_up_many(&mut self, count: isize) {
-        self.cur.y -= count;
+        self.cursor.y -= count;
         self.check_cursor();
     }
 
     pub fn move_down(&mut self) {
-        self.cur.y += 1;
+        self.cursor.y += 1;
         self.check_cursor();
     }
 
     pub fn move_up(&mut self) {
-        self.cur.y -= 1;
+        self.cursor.y -= 1;
         self.check_cursor();
     }
 
     pub fn move_right(&mut self) {
-        self.cur.x += 1;
+        self.cursor.x += 1;
         self.check_cursor();
     }
 
     pub fn move_left(&mut self) {
-        self.cur.x -= 1;
+        self.cursor.x -= 1;
         self.check_cursor();
     }
 
     pub fn move_top(&mut self) {
-        self.cur.y = 0;
+        self.cursor.y = 0;
         self.check_cursor();
     }
 
     pub fn move_bottom(&mut self) {
-        self.cur.y = self.lines.len() as isize - 1;
+        self.cursor.y = self.lines.len() as isize - 1;
         self.check_cursor();
     }
 
     pub fn move_start_line(&mut self) {
-        self.cur.x = 0;
+        self.cursor.x = 0;
         // disable append mode if enabled
         self.check_cursor();
     }
@@ -372,7 +382,7 @@ impl Buffer {
 
     /// move to the last char of the current line
     pub fn move_end_line(&mut self) {
-        self.cur.x = self.getline().len() as isize - 1;
+        self.cursor.x = self.getline().len() as isize - 1;
     }
 
     //
@@ -381,19 +391,16 @@ impl Buffer {
 
     /// Searches the buffer for all occurances of the given substring.
     /// Returns a Vec of indices to the start of the found substrings.
-    pub fn search_simple(&self, str: impl AsRef<str>) -> Vec<usize> {
-        let str = str.as_ref();
+    pub fn search(&self) -> Vec<Cursor> {
 
+        let query = &self.search_query;
         self.lines
             .iter()
-            // TODO: what about multiple search results? maybe use regex?
-            .filter_map(|line| line.find(str))
+            // TODO: what about multiple search results?
+            .enumerate()
+            // TODO: refactor
+            .filter_map(|(idx, line)| line.find(query).map(|q| (idx as isize, q as isize).into()))
             .collect()
-    }
-
-    // TODO: regex search
-    pub fn search_regex(&self) {
-        todo!()
     }
 
 }
@@ -418,18 +425,6 @@ mod tests {
     }
 
     #[test]
-    fn test_buffer_delete() {
-        let mut buf = Buffer::new();
-        buf.insert_string("foo");
-        buf.move_append_end_line();
-
-        buf.delete_char_before();
-        buf.delete_char_before();
-
-        assert_eq!(buf.lines, vec![ "f" ]);
-    }
-
-    #[test]
     fn test_buffer_append() {
         let mut buf = Buffer::new();
 
@@ -448,7 +443,7 @@ mod tests {
         let mut buf = Buffer::new();
         buf.insert_string("foo");
         buf.move_left();
-        assert_eq!(buf.cur.x, 0);
+        assert_eq!(buf.cursor.x, 0);
     }
 
     #[test]
@@ -458,7 +453,7 @@ mod tests {
         buf.move_right();
         buf.move_right();
         buf.move_right();
-        assert_eq!(buf.cur.x, 2);
+        assert_eq!(buf.cursor.x, 2);
     }
 
     #[test]
@@ -472,7 +467,7 @@ mod tests {
         buf.move_end_line();
 
         buf.move_up();
-        assert_eq!(buf.cur.x, 2);
+        assert_eq!(buf.cursor.x, 2);
     }
 
     #[test]
@@ -487,7 +482,7 @@ mod tests {
         buf.move_end_line();
 
         buf.move_down();
-        assert_eq!(buf.cur.x, 2);
+        assert_eq!(buf.cursor.x, 2);
     }
 
     #[test]
