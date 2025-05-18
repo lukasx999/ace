@@ -78,7 +78,7 @@ pub fn configure(app: &mut Application) {
     app.config.set_status(|app| {
         let ed = &app.ed;
 
-        let mode = ed.mode().to_string();
+        let mode = ed.buf().unwrap().mode().to_string();
         let buf_count = ed.buffers().count();
         let win = ed.windows().idcount;
         let win_count = ed.windows().count();
@@ -134,10 +134,10 @@ pub fn configure(app: &mut Application) {
     app.config.keymap(keybind!(Normal, M, NoMod), |app| app.ed.show_messages());
     app.config.keymap(keybind!(Normal, G, Shift), |app| app.ed.buf_mut().unwrap().move_bottom());
     app.config.keymap(keybind!(Normal, G, NoMod), |app| app.ed.buf_mut().unwrap().move_top());
-    app.config.keymap(keybind!(Normal, I, NoMod), |app| app.ed.set_mode(Mode::Insert));
+    app.config.keymap(keybind!(Normal, I, NoMod), |app| app.ed.buf_mut().unwrap().set_mode(Mode::Insert));
     app.config.keymap(keybind!(Normal, I, Shift), |app| {
         app.ed.buf_mut().unwrap().move_start_line();
-        app.ed.set_mode(Mode::Insert);
+        app.ed.buf_mut().unwrap().set_mode(Mode::Insert);
     });
 
     app.config.keymap(keybind!(Normal, Q, NoMod), |app| app.quit());
@@ -155,7 +155,7 @@ pub fn configure(app: &mut Application) {
     });
 
     app.config.keymap(keybind!(Insert, Escape, NoMod), |app| {
-        app.ed.set_mode(Mode::Normal);
+        app.ed.buf_mut().unwrap().set_mode(Mode::Normal);
         app.ed.buf_mut().unwrap().move_left();
     });
 
@@ -183,14 +183,14 @@ pub fn configure(app: &mut Application) {
         // not working correctly when on last char
         buf.append = true;
         buf.move_right();
-        app.ed.set_mode(Mode::Insert);
+        app.ed.buf_mut().unwrap().set_mode(Mode::Insert);
     });
-    app.config.keymap(keybind!(Normal, A, Shift), |app| { buf!(app).move_append_end_line(); app.ed.set_mode(Mode::Insert); });
-    app.config.keymap(keybind!(Normal, O, Shift), |app| { buf!(app).newline_above(); app.ed.set_mode(Mode::Insert); });
+    app.config.keymap(keybind!(Normal, A, Shift), |app| { buf!(app).move_append_end_line(); app.ed.buf_mut().unwrap().set_mode(Mode::Insert); });
+    app.config.keymap(keybind!(Normal, O, Shift), |app| { buf!(app).newline_above(); app.ed.buf_mut().unwrap().set_mode(Mode::Insert); });
     app.config.keymap(keybind!(Normal, O, NoMod), |app| {
         buf!(app).newline_below();
         buf!(app).move_down();
-        app.ed.set_mode(Mode::Insert);
+        app.ed.buf_mut().unwrap().set_mode(Mode::Insert);
     });
     app.config.keymap(keybind!(Insert, U, Ctrl), |app| buf!(app).clear_current_line());
     app.config.keymap(keybind!(Insert, Enter, NoMod), |app| buf!(app).split_newline());

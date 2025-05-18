@@ -1,6 +1,9 @@
 use std::{fmt::Display, sync::mpsc::Sender};
 use std::io;
 use std::path::Path;
+use std::collections::VecDeque;
+use std::cell::RefCell;
+use std::sync::Mutex;
 
 pub mod buffer;
 pub mod window;
@@ -10,6 +13,19 @@ use event::EventData;
 use buffer::{Buffer, Buffers, BufferID};
 use window::{Windows, WindowID, Window};
 
+pub struct EditorContext {
+    pub event_queue: VecDeque<EventData>,
+}
+
+impl EditorContext {
+    pub const fn new() -> Self {
+        Self {
+            event_queue: VecDeque::new(),
+        }
+    }
+}
+
+pub static CONTEXT: Mutex<EditorContext> = Mutex::new(EditorContext::new());
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash)]
@@ -47,7 +63,6 @@ pub type Message = String;
 
 #[derive(Debug, Clone)]
 pub struct Editor {
-    event_tx: Sender<EventData>,
     messages: Vec<Message>,
     buffers:  Buffers,
     mode:     Mode,
@@ -56,9 +71,8 @@ pub struct Editor {
 
 impl Editor {
 
-    pub fn new(event_tx: Sender<EventData>) -> Self {
+    pub fn new() -> Self {
         Self {
-            event_tx,
             messages: Vec::new(),
             windows:  Windows::default(),
             buffers:  Buffers::default(),
@@ -66,11 +80,11 @@ impl Editor {
         }
     }
 
-    pub fn with_file(event_tx: Sender<EventData>, path: impl AsRef<Path>) -> io::Result<Self> {
+    pub fn with_file(path: impl AsRef<Path>) -> io::Result<Self> {
         Ok(Self {
             buffers: Buffers::with_file(path)?,
             windows: Windows::with_buffer(0),
-            ..Self::new(event_tx)
+            ..Self::new()
         })
     }
 
@@ -136,18 +150,6 @@ impl Editor {
     #[must_use]
     pub fn buffers_mut(&mut self) -> &mut Buffers {
         &mut self.buffers
-    }
-
-    #[must_use]
-    pub fn mode(&self) -> Mode {
-        self.mode
-    }
-
-    pub fn set_mode(&mut self, mode: Mode) {
-        self.mode = mode;
-        self.event_tx
-            .send(EventData::ModeChanged(mode))
-            .unwrap();
     }
 
 }

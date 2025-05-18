@@ -34,7 +34,7 @@ impl WindowRenderer {
                 .buffers()
                 .get(id)
                 .unwrap();
-            self.buf.render(bounds, buf, ed.mode(), active);
+            self.buf.render(bounds, buf, ed.buf().unwrap().mode(), active);
 
         }
         // TODO: some sort of indicator for empty windows

@@ -2,6 +2,9 @@ use std::io::Write;
 use std::{fs, io, path};
 use std::path::{PathBuf, Path};
 use std::collections::BTreeMap;
+use std::sync::mpsc::Sender;
+
+use super::{EventData, Mode};
 
 
 
@@ -88,6 +91,7 @@ impl std::ops::Add for Cursor {
 // TODO:
 #[derive(Debug, Clone)]
 pub struct Selection {
+    // anchor is current cursor
     target: Cursor,
 }
 
@@ -100,6 +104,7 @@ pub struct Buffer {
     filename: Option<PathBuf>,
     cursor: Cursor,
     lines: Vec<String>,
+    mode: Mode,
     pub clipboard: Vec<String>,
 
     pub search_query: String,
@@ -125,6 +130,7 @@ impl Buffer {
 
     pub fn new() -> Self {
         Self {
+            mode: Mode::default(),
             clipboard: Vec::new(),
             search_query: "foo".to_string(),
             filename: None,
@@ -232,6 +238,19 @@ impl Buffer {
     //
     // Getter API
     //
+
+    #[must_use]
+    pub fn mode(&self) -> Mode {
+        self.mode
+    }
+
+    pub fn set_mode(&mut self, mode: Mode) {
+        self.mode = mode;
+
+        let mut ctx = super::CONTEXT.lock().unwrap();
+        ctx.event_queue.push_back(EventData::ModeChanged(mode));
+    }
+
 
     #[must_use]
     pub fn filename(&self) -> Option<&Path> {

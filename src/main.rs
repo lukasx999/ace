@@ -38,8 +38,6 @@ type AppResult<T> = Result<T, AppError>;
 #[derive(Debug)]
 struct Application {
     ed: Editor,
-    // TODO: this is kinda expensive, replace with VecDeque
-    event_queue: mpsc::Receiver<EventData>,
     config: Config,
     should_quit: bool,
     renderer: GuiRenderer,
@@ -49,16 +47,13 @@ impl Application {
 
     pub async fn new(path: Option<impl AsRef<Path>>) -> AppResult<Self> {
 
-        let (tx, rx) = mpsc::channel();
-
         let ed = if let Some(path) = path {
-            Editor::with_file(tx, path)?
+            Editor::with_file(path)?
         } else {
-            Editor::new(tx)
+            Editor::new()
         };
 
         let mut self_ = Self {
-            event_queue:  rx,
             should_quit:  false,
             renderer:     GuiRenderer::new().await?,
             config:       Config::default(),
@@ -79,7 +74,8 @@ impl Application {
 
         let found_bind = self.dispatch_keybinds();
 
-        if self.ed.mode() == Mode::Insert && !found_bind {
+        let mode = self.ed.buf().unwrap().mode();
+        if mode == Mode::Insert && !found_bind {
 
             if let Some(c) = get_char_pressed() {
                 let buf = self.ed.buf_mut().unwrap();
@@ -95,7 +91,9 @@ impl Application {
 
     fn handle_events(&mut self) {
 
-        if let Ok(ref ev) = self.event_queue.try_recv() {
+        let mut ctx = edit::CONTEXT.lock().unwrap();
+        if let Some(ref ev) = ctx.event_queue.pop_front() {
+            dbg!(ev);
             if let Some(callback) = self.config.autocmds().get(&ev.base()) {
                 callback(self, ev);
             }
@@ -109,7 +107,10 @@ impl Application {
         let mut found_bind = false;
         for (bind, action) in self.config.clone().keybinds() {
 
-            if bind.mode != self.ed.mode() { continue }
+            let mode = self.ed.buf().unwrap().mode();
+            if bind.mode != mode {
+                continue;
+            }
 
             if bind.key.is_active() {
                 action(self);
